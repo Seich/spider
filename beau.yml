@@ -1,0 +1,17 @@
+endpoint: http://localhost:3000
+
+defaults:
+  headers:
+    Accept: application/vnd.api+json
+    Content-Type: application/vnd.api+json
+
+POST /records:
+  alias: create-record
+  payload:
+    data:
+      type: Records
+      attributes:
+        url: http://martianwabbit.com/2018/05/25/testing-oclif-with-jest.html
+
+GET /records: records
+

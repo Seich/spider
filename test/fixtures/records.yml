@@ -1,0 +1,5 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+first:
+  url: http://martianwabbit.com/2018/05/25/testing-oclif-with-jest.html
+  crawled: false

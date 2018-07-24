@@ -1,0 +1,160 @@
+HTTP/1.1 200 OK
+Server: nginx
+Date: Wed, 25 Jul 2018 04:37:47 GMT
+Content-Type: text/html
+Content-Length: 9156
+Connection: keep-alive
+Vary: Accept-Encoding
+Last-Modified: Sat, 26 May 2018 01:15:02 GMT
+Accept-Ranges: bytes
+Cache-Control: max-age=7200, must-revalidate
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+	<title>Sergio Díaz  | Testing OCLIF apps with Jest </title>
+
+	<link rel="stylesheet" href="/css/screen.css">
+	<link rel="alternate" type="application/rss+xml" title="RSS Feed for martianwabbit.com" href="http://feeds.feedburner.com/SeichysMissingBit" />
+</head>
+<body>
+
+<div id="top">
+	<h1><a href="/">Sergio Díaz<span>.</span></a></h1>
+</div>
+
+<article>
+	<h1>
+		<a href="">Testing OCLIF apps with Jest</a>
+	</h1>
+
+	<aside>
+		<time>Posted on: May 25, 2018</time>
+		<span>676 Words</span>
+		<span>Takes 4 minutes to read</span>
+	</aside>
+
+	<p>A couple of weeks ago I spent sometime migrating <a href="https://beaujs.com">Beau</a> from
+commander to OCLIF. I really liked how every command in OCLIF is a stand alone
+class, it just felt tidier. Migrating the CLI was a breeze and I had the whole
+thing running in a couple of hours.</p>
+
+<p>After I was done I decided I wanted to add some tests. I mostly cared about the
+output so all I wanted to do was snapshot it and let Jest warn me if it changed
+by accident. I mostly write tests to make rewriting things easier so snapshotting
+covers about 95% of my testing.</p>
+
+<p>OCLIF recommends you use mocha and fancy-test for testing apps which is fine but
+since I was already using Jest I didn’t want to add even more dependencies. The
+test helpers OCLIF provides seem nice, they mostly handle stdout and stderr, and
+http requests. These are handy but since I only cared about the output I figured
+I wouldn’t need them.</p>
+
+<p>OCLIF makes testing super easy. Every command is a class and every class has a
+static <code class="highlighter-rouge">run</code> method which you can use to, <em>you guessed it</em>, run the command. It
+takes an array with the arguments the command would normally receive. Given that,
+testing is made super easy.</p>
+
+<p>Let’s create a Test command that prints “test” and test that it does so.</p>
+
+<p>Here’s our test command:</p>
+
+<div class="language-javascript highlighter-rouge"><pre class="highlight"><code><span class="kr">const</span> <span class="p">{</span> <span class="nx">Command</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'@oclif/command'</span><span class="p">);</span>
+
+<span class="kr">class</span> <span class="nx">TestCommand</span> <span class="kr">extends</span> <span class="nx">Command</span> <span class="p">{</span>
+	<span class="nx">async</span> <span class="nx">run</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'Test'</span><span class="p">);</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nx">module</span><span class="p">.</span><span class="nx">exports</span> <span class="o">=</span> <span class="nx">TestCommand</span><span class="p">;</span>
+</code></pre>
+</div>
+
+<p>If the CLI was called <code class="highlighter-rouge">hello</code> and we ran <code class="highlighter-rouge">hello test</code> we’d get ‘test’ back. Let’s
+add a test to confirm we are getting the expected result back.</p>
+
+<div class="language-javascript highlighter-rouge"><pre class="highlight"><code><span class="nx">describe</span><span class="p">(</span><span class="s1">'Test Command'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+	<span class="nx">it</span><span class="p">(</span><span class="s1">'should print Test'</span><span class="p">,</span> <span class="nx">async</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+		<span class="kd">let</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">await</span> <span class="nx">TestCommand</span><span class="p">.</span><span class="nx">run</span><span class="p">([]);</span>
+		<span class="nx">expect</span><span class="p">(</span><span class="nx">result</span><span class="p">).</span><span class="nx">toBe</span><span class="p">(</span><span class="s1">'Test'</span><span class="p">);</span>
+	<span class="p">});</span>
+<span class="p">});</span>
+</code></pre>
+</div>
+
+<p>This is cool, but wouldn’t work. Unfortunately the output is written to the
+STDOUT so that means that <code class="highlighter-rouge">run</code> doesn’t actually return anything. Luckily for us
+Jest has spies built-in so all it takes is to add a spy to that call:</p>
+
+<div class="language-javascript highlighter-rouge"><pre class="highlight"><code><span class="p">...</span>
+	<span class="nx">it</span><span class="p">(</span><span class="s1">'should print Test'</span><span class="p">,</span> <span class="nx">async</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+		<span class="kd">let</span> <span class="nx">spy</span> <span class="o">=</span> <span class="nx">jest</span><span class="p">.</span><span class="nx">spyOn</span><span class="p">(</span><span class="nx">process</span><span class="p">.</span><span class="nx">stdout</span><span class="p">,</span> <span class="s1">'write'</span><span class="p">);</span>
+
+		<span class="nx">await</span> <span class="nx">TestCommand</span><span class="p">.</span><span class="nx">run</span><span class="p">([]);</span>
+		<span class="nx">expect</span><span class="p">(</span><span class="nx">spy</span><span class="p">).</span><span class="nx">toHaveBeenCalledWith</span><span class="p">(</span><span class="s1">'Test'</span><span class="p">);</span>
+	<span class="p">});</span>
+<span class="p">...</span>
+</code></pre>
+</div>
+
+<p>To simplify this you can move the spy to a <code class="highlighter-rouge">beforeEach</code>.</p>
+
+<div class="language-javascript highlighter-rouge"><pre class="highlight"><code><span class="nx">describe</span><span class="p">(</span><span class="s1">'Test Command'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+	<span class="kd">let</span> <span class="nx">result</span><span class="p">;</span>
+
+	<span class="nx">beforeEach</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+		<span class="nx">result</span> <span class="o">=</span> <span class="p">[];</span>
+		<span class="nx">jest</span>
+			<span class="p">.</span><span class="nx">spyOn</span><span class="p">(</span><span class="nx">process</span><span class="p">.</span><span class="nx">stdout</span><span class="p">,</span> <span class="s1">'write'</span><span class="p">)</span>
+			<span class="p">.</span><span class="nx">mockImplementation</span><span class="p">(</span><span class="nx">val</span> <span class="o">=&gt;</span>
+				<span class="nx">result</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">val</span><span class="p">)</span>
+			<span class="p">);</span>
+	<span class="p">});</span>
+
+	<span class="nx">afterEach</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">jest</span><span class="p">.</span><span class="nx">restoreAllMocks</span><span class="p">());</span>
+
+	<span class="nx">it</span><span class="p">(</span><span class="s1">'should print Test'</span><span class="p">,</span> <span class="nx">async</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+		<span class="nx">await</span> <span class="nx">TestCommand</span><span class="p">.</span><span class="nx">run</span><span class="p">([]);</span>
+		<span class="nx">expect</span><span class="p">(</span><span class="nx">result</span><span class="p">).</span><span class="nx">toContain</span><span class="p">(</span><span class="s1">'Test'</span><span class="p">)</span>
+	<span class="p">});</span>
+<span class="p">});</span>
+
+</code></pre>
+</div>
+
+<p>Whenever <code class="highlighter-rouge">process.stdout.write</code> is called you push the value into the result array.
+You can then check if the correct values are a part of the array. I’d just snapshot
+it and call it the day though.</p>
+
+<p>Remember that the array that run expects is supposed to be the argv for that command.
+So they should be in the order they are expected and should all be strings.</p>
+
+<p>Have fun testing your CLIs.</p>
+
+
+	<p class="comments">
+		Have a comment? Feel free to <a href="mailto:seich@martianwabbit.com">email me</a>.
+	</p>
+</article>
+
+
+<footer>
+	<p>David Sergio Díaz © All Rights Reserved.</p>
+	<p>Happily hosted on <a href="http://www.webfaction.com?affiliate=seich">WebFaction</a>.</p>
+</footer>
+
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+		ga('create', 'UA-2565966-9', 'auto');
+		ga('send', 'pageview');
+	</script>
+</body>
+</html>
